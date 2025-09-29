@@ -1,12 +1,14 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Upload, AlertTriangle, Camera } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { MapPin, Upload, AlertTriangle, Camera, X, Image, Wifi, WifiOff, Cloud, CloudOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useOfflineStorage } from "@/hooks/useOfflineStorage";
 
 export default function ShareInfo() {
   const [formData, setFormData] = useState({
@@ -16,8 +18,17 @@ export default function ShareInfo() {
     description: "",
     severity: "",
   });
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { 
+    isOnline, 
+    saveOfflineReport, 
+    syncInProgress, 
+    getOfflineReportsCount 
+  } = useOfflineStorage();
 
   const disasterTypes = [
     { value: "earthquake", label: "Earthquake" },
@@ -36,6 +47,68 @@ export default function ShareInfo() {
     { value: "critical", label: "Critical", color: "bg-red-500" },
   ];
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    
+    // Validate file types
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    const validFiles = files.filter(file => {
+      if (!validTypes.includes(file.type)) {
+        toast({
+          title: "Invalid File Type",
+          description: `${file.name} is not a valid image format. Please use JPG, PNG, GIF, or WebP.`,
+          variant: "destructive",
+        });
+        return false;
+      }
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        toast({
+          title: "File Too Large",
+          description: `${file.name} is too large. Please use images under 5MB.`,
+          variant: "destructive",
+        });
+        return false;
+      }
+      return true;
+    });
+
+    if (selectedImages.length + validFiles.length > 5) {
+      toast({
+        title: "Too Many Images",
+        description: "You can upload a maximum of 5 images per report.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Add new images to existing ones
+    const newImages = [...selectedImages, ...validFiles];
+    setSelectedImages(newImages);
+
+    // Create preview URLs
+    const newPreviews = [...imagePreviews];
+    validFiles.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        newPreviews.push(e.target?.result as string);
+        setImagePreviews([...newPreviews]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeImage = (index: number) => {
+    const newImages = selectedImages.filter((_, i) => i !== index);
+    const newPreviews = imagePreviews.filter((_, i) => i !== index);
+    setSelectedImages(newImages);
+    setImagePreviews(newPreviews);
+    
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -50,15 +123,29 @@ export default function ShareInfo() {
 
     setIsSubmitting(true);
     
-    // Simulate submission
-    setTimeout(() => {
-      setIsSubmitting(false);
-      toast({
-        title: "Report Submitted Successfully!",
-        description: "Thank you for sharing this information. Your report will be reviewed by the community.",
+    try {
+      // Save report (works both online and offline)
+      await saveOfflineReport({
+        title: formData.title,
+        type: formData.type,
+        location: formData.location,
+        description: formData.description,
+        severity: formData.severity,
+        images: selectedImages
       });
+
+      // Reset form
       setFormData({ title: "", type: "", location: "", description: "", severity: "" });
-    }, 2000);
+      setSelectedImages([]);
+      setImagePreviews([]);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    } catch (error) {
+      console.error('Failed to submit report:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -77,6 +164,37 @@ export default function ShareInfo() {
             <p className="text-muted-foreground">
               Help your community stay safe by sharing accurate disaster information. Your reports help others prepare and respond effectively.
             </p>
+          </div>
+          
+          {/* Network Status Indicator */}
+          <div className="flex justify-center">
+            <Alert className={`max-w-md ${isOnline ? 'border-green-200 bg-green-50' : 'border-orange-200 bg-orange-50'}`}>
+              <div className="flex items-center gap-2">
+                {isOnline ? (
+                  <Wifi className="h-4 w-4 text-green-600" />
+                ) : (
+                  <WifiOff className="h-4 w-4 text-orange-600" />
+                )}
+                <AlertDescription className={isOnline ? 'text-green-800' : 'text-orange-800'}>
+                  {isOnline ? (
+                    <span>You're connected. Reports will be submitted immediately.</span>
+                  ) : (
+                    <span>You're offline. Reports will be saved and synced when connection is restored.</span>
+                  )}
+                  {!isOnline && getOfflineReportsCount() > 0 && (
+                    <span className="ml-2 font-medium">
+                      ({getOfflineReportsCount()} pending)
+                    </span>
+                  )}
+                  {syncInProgress && (
+                    <span className="ml-2 flex items-center gap-1">
+                      <Cloud className="h-3 w-3 animate-pulse" />
+                      Syncing...
+                    </span>
+                  )}
+                </AlertDescription>
+              </div>
+            </Alert>
           </div>
         </div>
 
@@ -160,20 +278,68 @@ export default function ShareInfo() {
                     />
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <label className="text-sm font-medium flex items-center gap-2">
                       <Camera className="h-4 w-4" />
-                      Upload Images (Optional)
+                      Upload Images (Optional) - Max 5 images, 5MB each
                     </label>
-                    <div className="border-2 border-dashed border-muted-foreground rounded-lg p-8 text-center">
+                    
+                    <div 
+                      className="border-2 border-dashed border-muted-foreground rounded-lg p-6 text-center cursor-pointer hover:border-primary transition-colors"
+                      onClick={() => fileInputRef.current?.click()}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const files = Array.from(e.dataTransfer.files);
+                        const event = { target: { files } } as any;
+                        handleImageUpload(event);
+                      }}
+                    >
                       <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-muted-foreground mb-2">
                         Drop images here or click to browse
                       </p>
-                      <Button variant="outline" size="sm" className="mt-2">
+                      <Button variant="outline" size="sm" type="button">
+                        <Image className="h-4 w-4 mr-2" />
                         Choose Files
                       </Button>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="hidden"
+                      />
                     </div>
+
+                    {/* Image Previews */}
+                    {imagePreviews.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium">Selected Images ({selectedImages.length}/5):</p>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          {imagePreviews.map((preview, index) => (
+                            <div key={index} className="relative group">
+                              <img
+                                src={preview}
+                                alt={`Preview ${index + 1}`}
+                                className="w-full h-24 object-cover rounded-lg border"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removeImage(index)}
+                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                              <div className="absolute bottom-1 left-1 bg-black bg-opacity-50 text-white text-xs px-1 rounded">
+                                {(selectedImages[index].size / 1024 / 1024).toFixed(1)}MB
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <Button type="submit" className="w-full" disabled={isSubmitting}>

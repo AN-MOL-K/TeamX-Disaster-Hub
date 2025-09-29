@@ -18,19 +18,19 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
 const baseNavigationItems = [
-  { icon: Home, label: "Home", path: "/", roles: ["guest", "enduser", "admin"] },
-  { icon: Share, label: "Share Info", path: "/share-info", roles: ["enduser", "admin"] },
-  { icon: Heart, label: "Donate", path: "/donate", roles: ["guest", "enduser", "admin"] },
-  { icon: Shield, label: "Preparedness Tips", path: "/preparedness-tips", roles: ["guest", "enduser", "admin"] },
-  { icon: AlertTriangle, label: "Disaster's Info", path: "/disaster-info", roles: ["guest", "enduser", "admin"] },
-  { icon: HelpCircle, label: "Help", path: "/help", roles: ["guest", "enduser", "admin"] },
-  { icon: Info, label: "Learn More", path: "/learn-more", roles: ["guest", "enduser", "admin"] },
-  { icon: User, label: "Profile", path: "/profile", roles: ["enduser", "admin"] },
+  { icon: Home, label: "Home", path: "/", roles: ["guest", "enduser", "admin"], title: "Go to homepage" },
+  { icon: Share, label: "Share Info", path: "/share-info", roles: ["enduser", "admin"], title: "Share disaster information" },
+  { icon: Heart, label: "Donate", path: "/donate", roles: ["guest", "enduser", "admin"], title: "Support disaster relief efforts" },
+  { icon: Shield, label: "Preparedness Tips", path: "/preparedness-tips", roles: ["guest", "enduser", "admin"], title: "Learn emergency preparedness" },
+  { icon: AlertTriangle, label: "Disaster's Info", path: "/disaster-info", roles: ["guest", "enduser", "admin"], title: "View disaster information" },
+  { icon: HelpCircle, label: "Help", path: "/help", roles: ["guest", "enduser", "admin"], title: "Get help and support" },
+  { icon: Info, label: "Learn More", path: "/learn-more", roles: ["guest", "enduser", "admin"], title: "Learn about disaster response" },
+  { icon: User, label: "Profile", path: "/profile", roles: ["enduser", "admin"], title: "View your profile" },
 ];
 
 const adminNavigationItems = [
-  { icon: BarChart3, label: "Analytics", path: "/analytics", roles: ["admin"] },
-  { icon: Settings, label: "Manage Users", path: "/manage-users", roles: ["admin"] },
+  { icon: BarChart3, label: "Analytics", path: "/analytics", roles: ["admin"], title: "View analytics dashboard" },
+  { icon: Settings, label: "Manage Users", path: "/manage-users", roles: ["admin"], title: "Manage user accounts and permissions" },
 ];
 
 export function NavigationSidebar() {
@@ -45,31 +45,18 @@ export function NavigationSidebar() {
       item.roles.includes(userRole)
     );
     
-    // Add admin items if user is admin
-    if (user?.role === "admin") {
-      return [...filteredItems, ...adminNavigationItems];
-    }
-    
-    return filteredItems;
+    // Always add admin items for everyone (no authentication required)
+    return [...filteredItems, ...adminNavigationItems];
   };
 
   const handleNavigation = (item: typeof baseNavigationItems[0]) => {
-    if (item.path === "/help" || item.path === "/learn-more" || item.path === "/analytics" || item.path === "/manage-users") {
-      // For pages we haven't created yet, show toast
-      const actionMessages = {
-        "/help": "Get help and support. Contact emergency services or find local resources.",
-        "/learn-more": "Discover more about disaster preparedness and community response.",
-        "/analytics": "View detailed analytics and reports dashboard (Admin only).",
-        "/manage-users": "Manage user accounts and permissions (Admin only)."
-      };
-
-      toast({
-        title: item.label,
-        description: actionMessages[item.path as keyof typeof actionMessages] || `${item.label} page coming soon!`,
-      });
-    } else {
-      navigate(item.path);
-    }
+    console.log("Navigation clicked:", item.label, "Path:", item.path);
+    console.log("About to navigate to:", item.path);
+    
+    // All pages now have proper routes, so just navigate
+    navigate(item.path);
+    
+    console.log("Navigation completed for:", item.path);
   };
 
   const navigationItems = getNavigationItems();
@@ -102,6 +89,7 @@ export function NavigationSidebar() {
               variant={isActive ? "secondary" : "ghost"}
               className="w-full justify-start gap-3 h-11"
               onClick={() => handleNavigation(item)}
+              title={item.title || ""}
             >
               <Icon className="h-4 w-4" />
               <span className="font-medium">{item.label}</span>

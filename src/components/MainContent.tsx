@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import earthquakeImage from "@/assets/earthquake-damage.jpg";
 import floodImage from "@/assets/flood-scene.jpg";
 import wildfireImage from "@/assets/wildfire-emergency.jpg";
+import stormImage from "@/assets/strom.webp";
 
 const mockDisasters = [
   {
@@ -47,7 +48,7 @@ const mockDisasters = [
     title: "Severe Storm System Approaching",
     type: "storm" as const,
     location: "Miami, FL",
-    image: floodImage, // Using flood image as placeholder
+    image: stormImage, // Now using dedicated storm image
     verified: "unverified" as const,
     description: "Weather models show potential for damaging winds and hail. Residents advised to secure outdoor items.",
     timestamp: "8 hours ago"

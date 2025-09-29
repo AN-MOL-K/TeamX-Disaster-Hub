@@ -17,6 +17,10 @@ import DisasterDetail from "./pages/DisasterDetail";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
 import Profile from "./pages/Profile";
+import Analytics from "./pages/Analytics";
+import ManageUsers from "./pages/ManageUsers";
+import Help from "./pages/Help";
+import LearnMore from "./pages/LearnMore";
 
 const queryClient = new QueryClient();
 
@@ -43,6 +47,10 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<SignUp />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/analytics" element={<Analytics />} />
+            <Route path="/manage-users" element={<ManageUsers />} />
+            <Route path="/help" element={<Help />} />
+            <Route path="/learn-more" element={<LearnMore />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

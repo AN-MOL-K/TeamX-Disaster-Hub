@@ -1,0 +1,2 @@
+<!-- This is a placeholder file. Replace 'storm-image.jpg' in the public folder with your actual storm image -->
+<!-- The storm image should be named exactly 'storm-image.jpg' and placed in the public folder -->
